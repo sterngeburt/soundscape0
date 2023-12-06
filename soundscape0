@@ -1,0 +1,115 @@
+use_bpm 44
+
+
+DRUM_SLEEP = 0.5
+BASS_SLEEP = 0.5
+ARP_SLEEP = 0.125
+REVERB_ROOMS = (ring 0.6, 0.7, 0.8, 0.9).tick
+
+
+define :white_noise_drone do |duration, note, cutoff|
+  with_fx :reverb, room: REVERB_ROOMS do
+    with_fx :distortion, distort: 0.5 do
+      with_fx :bitcrusher, bits: 10 do
+        with_fx :lpf, cutoff: cutoff, res: 0.8 do
+          noise = synth :cnoise, note: note, release: duration, amp: 0.3
+          control noise, noise: 1, cutoff: 44
+          sleep duration
+        end
+      end
+    end
+  end
+end
+
+
+live_loop :drums do
+  with_fx :distortion, mix: 0.3 do
+    with_fx :lpf, cutoff: 80 do
+      sample :bd_haus, rate: 1
+    end
+  end
+  sleep DRUM_SLEEP
+  with_fx :reverb, room: REVERB_ROOMS do
+    with_fx :bitcrusher, bits: 6 do
+      sample :elec_hi_snare if one_in(4)
+    end
+  end
+end
+
+
+live_loop :bassline do
+  use_synth :fm
+  with_fx :echo, mix: 0.2 do
+    with_fx :slicer, phase: 0.25, mix: 0.6 do
+      with_fx :echo, phase: 0.25, mix: 0.5 do
+        play :C1, release: 0.25, amp: 0.8
+      end
+    end
+    sleep BASS_SLEEP
+    with_fx :distortion, distort: 0.4 do
+      with_fx :wobble, phase: 0.25, cutoff_max: 80, cutoff_min: 60 do
+        play :E1, release: 0.25, amp: 0.8
+      end
+    end
+    sleep BASS_SLEEP
+    with_fx :flanger, depth: 1, feedback: 0.5 do
+      with_fx :echo, phase: 0.5, mix: 0.6 do
+        play :G1, release: 0.25, amp: 0.8
+      end
+    end
+    sleep BASS_SLEEP
+    with_fx :pitch_shift, pitch: 2 do
+      with_fx :reverb, room: REVERB_ROOMS do
+        play :B1, release: 0.25, amp: 0.8
+      end
+    end
+    sleep BASS_SLEEP
+    
+  end
+end
+
+
+live_loop :lofi_arp do
+  use_synth :beep
+  arp_pattern = [:C5, :E3, :G2, :B4, :C5, :B4, :G5, :E4]
+  arp_timings = [0.25, 0.125, 0.125, 0.125, 0.25, 0.125, 0.125, 0.125]
+  with_fx :bitcrusher, bits: 5, sample_rate: 4444 do
+    with_fx :reverb, room: REVERB_ROOMS do
+      play_pattern_timed arp_pattern, arp_timings, release: 0.15, amp: 0.2
+    end
+  end
+end
+
+
+LUCID_DREAM_DURATION = 16
+live_loop :lucid_dream do
+  with_fx :reverb, room: 0.9, mix: 0.5 do
+    with_fx :echo, phase: 0.5, mix: 0.3 do
+      with_fx :pan, pan: rrand(-1, 1) do
+        synth :prophet, note: choose([:C4, :E4, :G4, :B4]), release: rrand(0.5, 2), cutoff: rrand(70, 120), amp: rrand(0.2, 0.5)
+        sleep rrand(0.2, 1)
+      end
+    end
+  end
+end
+
+
+
+define :custom_ambient_synth do |note, duration|
+  use_synth :fm
+  with_fx :reverb, room: 0.9, mix: 0.7 do
+    with_fx :echo, phase: 2, mix: 0.4 do
+      play note, attack: 2, release: duration - 2, cutoff: rrand(70, 120), amp: 0.2
+      sleep duration
+    end
+  end
+end
+live_loop :complex_ambient do
+  notes = (chord :D3, :minor, num_octaves: 3).ring
+  durations = [4, 6, 8].choose
+  
+  4.times do
+    custom_ambient_synth(notes.tick, durations)
+  end
+end
+
